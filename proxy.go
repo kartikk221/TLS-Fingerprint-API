@@ -4,7 +4,6 @@ import (
 	"compress/zlib"
 	"flag"
 	"fmt"
-	"github.com/fatih/color"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -29,7 +28,6 @@ func main() {
 	port := flag.String("port", "8082", "A port number (default 8082)")
 	flag.Parse()
 	fmt.Println("Hosting a TLS API on port " + *port)
-	fmt.Println("If you like this API, all donations are appreciated! https://paypal.me/carcraftz")
 	http.HandleFunc("/", handleReq)
 	err := http.ListenAndServe(":"+string(*port), nil)
 	if err != nil {
@@ -74,8 +72,8 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 	timeoutraw := r.Header.Get("Poptls-Timeout")
 	timeout, err := strconv.Atoi(timeoutraw)
 	if err != nil {
-		//default timeout of 6
-		timeout = 6
+		// default timeout of 15 seconds
+		timeout = 15
 	}
 	if timeout > 60 {
 		http.Error(w, "ERROR: Timeout cannot be longer than 60 seconds", http.StatusBadRequest)
@@ -145,7 +143,7 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 		"cookie",
 	}
 	headermap := make(map[string]string)
-	//TODO: REDUCE TIME COMPLEXITY (This code is very bad)
+	// TODO: REDUCE TIME COMPLEXITY (This code is very bad)
 	headerorderkey := []string{}
 	for _, key := range masterheaderorder {
 		for k, v := range r.Header {
@@ -155,7 +153,6 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 				headerorderkey = append(headerorderkey, lowercasekey)
 			}
 		}
-
 	}
 	for k, v := range req.Header {
 		if _, ok := headermap[k]; !ok {
@@ -184,7 +181,6 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("Host", u.Host)
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("[%s][%s][%s]\r\n", color.YellowString("%s", time.Now().Format("2012-11-01T22:08:41+00:00")), color.BlueString("%s", pageURL), color.RedString("Connection Failed"))
 		hj, ok := w.(http.Hijacker)
 		if !ok {
 			panic(err)
@@ -200,8 +196,6 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	//req.Close = true
-
 	//forward response headers
 	for k, v := range resp.Header {
 		if k != "Content-Length" && k != "Content-Encoding" {
@@ -211,14 +205,7 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(resp.StatusCode)
-	var status string
-	if resp.StatusCode > 302 {
-		status = color.RedString("%s", resp.Status)
-	} else {
-		status = color.GreenString("%s", resp.Status)
-	}
-	fmt.Printf("[%s][%s][%s]\r\n", color.YellowString("%s", time.Now().Format("2012-11-01T22:08:41+00:00")), color.BlueString("%s", pageURL), status)
-
+	
 	//forward decoded response body
 	encoding := resp.Header["Content-Encoding"]
 	body, err := ioutil.ReadAll(resp.Body)
@@ -247,14 +234,14 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 			}
 			finalres = string(unz)
 		} else {
-			fmt.Println("UNKNOWN ENCODING: " + encoding[0])
+			// fmt.Println("UNKNOWN ENCODING: " + encoding[0])
 			finalres = string(body)
 		}
 	} else {
 		finalres = string(body)
 	}
 	if _, err := fmt.Fprint(w, finalres); err != nil {
-		log.Println("Error writing body:", err)
+		// log.Println("Error writing body:", err)
 	}
 }
 
